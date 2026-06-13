@@ -49,6 +49,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.2"
+
       - name: Build import-link comment for changed blueprints
         id: build
         env:
