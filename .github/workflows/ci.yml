@@ -30,3 +30,46 @@ jobs:
 
       - name: Validate blueprint structure
         run: python3 .github/scripts/validate_blueprints.py
+
+  import-links:
+    name: Post blueprint import links
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Build import-link comment for changed blueprints
+        id: build
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.yaml' '*.yml' > changed.txt
+          python3 .github/scripts/pr_import_links.py changed.txt > comment.md
+          if [ -s comment.md ]; then
+            echo "has_comment=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_comment=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post or update PR comment
+        if: steps.build.outputs.has_comment == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # edit the previous bot comment if present, otherwise create a new one
+          gh pr comment "$PR" --edit-last --body-file comment.md \
+            || gh pr comment "$PR" --body-file comment.md
