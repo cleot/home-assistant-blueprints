@@ -1,0 +1,209 @@
+blueprint:
+  name: Philips Hue Dimmer Switch v2 (929002398602) - Event Entity Controller
+  description: |
+    # Philips Hue Dimmer Switch v2 (929002398602) — Event Entity Controller
+
+    Customizable controller automation for the Philips Hue Dimmer Switch gen 2 (929002398602)
+    via Zigbee2MQTT, using Home Assistant **event entities**.
+
+    Select the device's action **event entities** from a dropdown — no MQTT topic or friendly
+    name strings to type. Because it uses native HA entities, button activity is visible in
+    the **logbook, history, dashboards and the mobile app**, and the entities can be reused by
+    other automations.
+
+    ---
+
+    ## ⚠️ Requirement — enable event entities in Zigbee2MQTT
+
+    This blueprint reads from Home Assistant **event entities** (Zigbee2MQTT creates one per
+    physical button, all named "<device> Action"), which only exist when the experimental
+    setting is enabled:
+
+    **Zigbee2MQTT → Settings → Home Assistant integration → "Experimental event entities" → ON**
+
+    After enabling it, **press each button once** so the entities are discovered, then select
+    them all below.
+
+    If you'd rather not enable this flag, use the raw-MQTT-topic blueprint instead — it works
+    with zero setup but does not expose the buttons as a HA entity.
+
+    ---
+
+    💡 Tip: prefer the **Released** actions over **Pressed** where possible — a short tap fires
+    both `*_press` and `*_press_release`, and `*_press` also fires at the start of a long hold.
+
+  source_url: https://github.com/cleot/home-assistant-blueprints/blob/main/philips_929002398602/cleot/hue_dimmer_switch_929002398602.yaml
+  domain: automation
+  input:
+    controller:
+      name: (Zigbee2MQTT) Action Event Entities
+      description: >-
+        Select ALL of the dimmer's "Action" event entities. Zigbee2MQTT creates one per
+        physical button (on, off, up, down) and they are typically all named
+        "<device> Action", so simply select every event entity belonging to this dimmer —
+        the automation works out which button was pressed from the entity's attributes.
+        Requires "Experimental event entities" enabled in Zigbee2MQTT (see description).
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: mqtt
+              domain: event
+
+    # Button On
+    on_press:
+      name: Button On Pressed
+      description: Action to run when the On button is pressed (also fires at the start of a hold).
+      default: []
+      selector:
+        action: {}
+    on_held:
+      name: Button On Held
+      description: Action to run when the On button is held.
+      default: []
+      selector:
+        action: {}
+    on_released:
+      name: Button On Released
+      description: Action to run when the On button is released after a short press.
+      default: []
+      selector:
+        action: {}
+    on_hold_released:
+      name: Button On Hold Released
+      description: Action to run when the On button is released after a long press.
+      default: []
+      selector:
+        action: {}
+
+    # Button Up
+    up_pressed:
+      name: Button Up Pressed
+      description: Action to run when the Up button is pressed (also fires at the start of a hold).
+      default: []
+      selector:
+        action: {}
+    up_held:
+      name: Button Up Held
+      description: Action to run when the Up button is held.
+      default: []
+      selector:
+        action: {}
+    up_released:
+      name: Button Up Released
+      description: Action to run when the Up button is released after a short press.
+      default: []
+      selector:
+        action: {}
+    up_hold_released:
+      name: Button Up Hold Released
+      description: Action to run when the Up button is released after a long press.
+      default: []
+      selector:
+        action: {}
+
+    # Button Down
+    down_pressed:
+      name: Button Down Pressed
+      description: Action to run when the Down button is pressed (also fires at the start of a hold).
+      default: []
+      selector:
+        action: {}
+    down_held:
+      name: Button Down Held
+      description: Action to run when the Down button is held.
+      default: []
+      selector:
+        action: {}
+    down_released:
+      name: Button Down Released
+      description: Action to run when the Down button is released after a short press.
+      default: []
+      selector:
+        action: {}
+    down_hold_released:
+      name: Button Down Hold Released
+      description: Action to run when the Down button is released after a long press.
+      default: []
+      selector:
+        action: {}
+
+    # Button Off (the "Hue" button)
+    off_pressed:
+      name: Button Off Pressed
+      description: Action to run when the Off button is pressed (also fires at the start of a hold). (Off is also the "hue" button)
+      default: []
+      selector:
+        action: {}
+    off_held:
+      name: Button Off Held
+      description: Action to run when the Off button is held. (Off is also the "hue" button)
+      default: []
+      selector:
+        action: {}
+    off_released:
+      name: Button Off Released
+      description: Action to run when the Off button is released after a short press. (Off is also the "hue" button)
+      default: []
+      selector:
+        action: {}
+    off_hold_released:
+      name: Button Off Hold Released
+      description: Action to run when the Off button is released after a long press. (Off is also the "hue" button)
+      default: []
+      selector:
+        action: {}
+
+mode: parallel
+max: 6
+triggers:
+  - trigger: state
+    entity_id: !input controller
+actions:
+  # Z2M creates one event entity per button: the pressed button is in the "button" attribute
+  # (on/off/up/down) and the gesture in "event_type" (press/hold/press_release/hold_release).
+  # Recombine them into the canonical Z2M action, e.g. "off" + "press_release" = "off_press_release".
+  - variables:
+      button: "{{ trigger.to_state.attributes.button | default('') }}"
+      gesture: "{{ trigger.to_state.attributes.event_type | default('') }}"
+      controller_action: "{{ button ~ '_' ~ gesture }}"
+  - choose:
+      # ignore startup/unavailable transitions and the binding-only "recall" gesture
+      - conditions: "{{ button != '' and gesture not in ['', 'None', 'unknown', 'unavailable', 'recall'] }}"
+        sequence:
+          - choose:
+              - conditions: "{{ controller_action == 'on_press' }}"
+                sequence: !input on_press
+              - conditions: "{{ controller_action == 'up_press' }}"
+                sequence: !input up_pressed
+              - conditions: "{{ controller_action == 'down_press' }}"
+                sequence: !input down_pressed
+              - conditions: "{{ controller_action == 'off_press' }}"
+                sequence: !input off_pressed
+
+              - conditions: "{{ controller_action == 'on_hold' }}"
+                sequence: !input on_held
+              - conditions: "{{ controller_action == 'up_hold' }}"
+                sequence: !input up_held
+              - conditions: "{{ controller_action == 'down_hold' }}"
+                sequence: !input down_held
+              - conditions: "{{ controller_action == 'off_hold' }}"
+                sequence: !input off_held
+
+              - conditions: "{{ controller_action == 'on_press_release' }}"
+                sequence: !input on_released
+              - conditions: "{{ controller_action == 'up_press_release' }}"
+                sequence: !input up_released
+              - conditions: "{{ controller_action == 'down_press_release' }}"
+                sequence: !input down_released
+              - conditions: "{{ controller_action == 'off_press_release' }}"
+                sequence: !input off_released
+
+              - conditions: "{{ controller_action == 'on_hold_release' }}"
+                sequence: !input on_hold_released
+              - conditions: "{{ controller_action == 'up_hold_release' }}"
+                sequence: !input up_hold_released
+              - conditions: "{{ controller_action == 'down_hold_release' }}"
+                sequence: !input down_hold_released
+              - conditions: "{{ controller_action == 'off_hold_release' }}"
+                sequence: !input off_hold_released

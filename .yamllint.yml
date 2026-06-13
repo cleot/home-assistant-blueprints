@@ -1,0 +1,23 @@
+# yamllint config tuned for Home Assistant blueprints.
+# Blueprints have long description/URL lines and use custom !input tags,
+# so a few of the strict defaults are relaxed.
+extends: default
+
+rules:
+  # Descriptions and source_url lines are legitimately long.
+  line-length: disable
+  # Blueprints do not start with '---'.
+  document-start: disable
+  # Allow on/off/yes/no as mapping keys (e.g. on_press) without truthy warnings.
+  truthy:
+    check-keys: false
+  # HA blueprints frequently use comments aligned to nested content.
+  comments-indentation: disable
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  # Some blueprint descriptions use blank-line spacing / ASCII art.
+  empty-lines:
+    max: 3
