@@ -57,85 +57,85 @@ blueprint:
       selector:
         action: {}
     on_released:
-      name: Button On released
+      name: Button On Released
       description: Action set to run, when the Button On is released.
       default: []
       selector:
         action: {}
     on_hold_released:
-      name: Button On Hold released
+      name: Button On Hold Released
       description: Action set to run, when the Button On is pressed and is released after long press.
       default: []
       selector:
         action: {}
     up_pressed:
-      name: Up Pressed
-      description: Action set to run, when the Up pressed even when hold.
+      name: Button Up Pressed
+      description: Action set to run, when the Button Up is pressed even when hold.
       default: []
       selector:
         action: {}
     up_held:
-      name: Up Held
-      description: Action set to run, when the Up is held.
+      name: Button Up Held
+      description: Action set to run, when the Button Up is held.
       default: []
       selector:
         action: {}
     up_released:
-      name: Up released
-      description: Action set to run, when the Up is released.
+      name: Button Up Released
+      description: Action set to run, when the Button Up is released.
       default: []
       selector:
         action: {}
     up_hold_released:
-      name: Button Up Hold released
+      name: Button Up Hold Released
       description: Action set to run, when the Button Up is pressed and is released after long press.
       default: []
       selector:
         action: {}
     down_pressed:
-      name: Down Pressed
-      description: Action set to run, when the Down is pressed even when hold.
+      name: Button Down Pressed
+      description: Action set to run, when the Button Down is pressed even when hold.
       default: []
       selector:
         action: {}
     down_held:
-      name: Down Held
-      description: Action set to run, when the Down is held.
+      name: Button Down Held
+      description: Action set to run, when the Button Down is held.
       default: []
       selector:
         action: {}
     down_released:
-      name: Down released
-      description: Action set to run, when the Down is released.
+      name: Button Down Released
+      description: Action set to run, when the Button Down is released.
       default: []
       selector:
         action: {}
     down_hold_released:
-      name: Button Down Hold released
+      name: Button Down Hold Released
       description: Action set to run, when the Button Down is pressed and is released after long press.
       default: []
       selector:
         action: {}
     off_pressed:
-      name: Off Pressed
-      description: Action set to run, when the Off is pressed even when hold. (Off is also the "hue" button)
+      name: Button Off Pressed
+      description: Action set to run, when the Button Off is pressed even when hold. (Off is also the "hue" button)
       default: []
       selector:
         action: {}
     off_held:
-      name: Off Held
-      description: Action set to run, when the Off is held. (Off is also the "hue" button)
+      name: Button Off Held
+      description: Action set to run, when the Button Off is held. (Off is also the "hue" button)
       default: []
       selector:
         action: {}
     off_released:
-      name: Off released
-      description: Action set to run, when the Off is released. (Off is also the "hue" button)
+      name: Button Off Released
+      description: Action set to run, when the Button Off is released. (Off is also the "hue" button)
       default: []
       selector:
         action: {}
     off_hold_released:
-      name: Button Off Hold released
+      name: Button Off Hold Released
       description: Action set to run, when the Button Off is pressed and is released after long press. (Off is also the "hue" button)
       default: []
       selector:
@@ -147,14 +147,16 @@ max: 6
 trigger_variables:
   base_topic: !input base_topic
   controller: !input controller
-trigger:
-  - platform: mqtt
+triggers:
+  - trigger: mqtt
     topic: "{{ base_topic ~ '/' ~ controller }}"
-action:
+actions:
   - variables:
       controller: !input controller
   - choose:
-      - conditions: "{{('hold' in trigger.payload_json.action) or ('release' in trigger.payload_json.action) or 'press' in trigger.payload_json.action}}"
+      # only react to messages that actually carry a button action,
+      # ignore the state/battery/linkquality updates published on the same topic
+      - conditions: "{{ trigger.payload_json.action is defined and trigger.payload_json.action not in [none, ''] }}"
         sequence:
           - choose:
               - conditions: '{{ trigger.payload_json.action == "on_press" or trigger.payload_json.action == "on-press" }}'
