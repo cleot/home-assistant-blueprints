@@ -6,21 +6,23 @@ ablueprint:
     Customizable controller automation for the Philips Hue Dimmer Switch gen 2 (929002398602)
     via Zigbee2MQTT, using Home Assistant **event entities**.
 
-    Pick the device's action **event entity** from a dropdown — no MQTT topic or friendly
-    name strings to type. Because it uses a native HA entity, button activity is visible in
-    the **logbook, history, dashboards and the mobile app**, and the entity can be reused by
+    Select the device's action **event entities** from a dropdown — no MQTT topic or friendly
+    name strings to type. Because it uses native HA entities, button activity is visible in
+    the **logbook, history, dashboards and the mobile app**, and the entities can be reused by
     other automations.
 
     ---
 
     ## ⚠️ Requirement — enable event entities in Zigbee2MQTT
 
-    This blueprint reads from a Home Assistant **event entity** (e.g. `event.<device>_action`),
-    which Zigbee2MQTT only creates when the experimental setting is enabled:
+    This blueprint reads from Home Assistant **event entities** (Zigbee2MQTT creates one per
+    physical button, all named "<device> Action"), which only exist when the experimental
+    setting is enabled:
 
     **Zigbee2MQTT → Settings → Home Assistant integration → "Experimental event entities" → ON**
 
-    After enabling it, **press any button once** so the entity is discovered, then select it below.
+    After enabling it, **press each button once** so the entities are discovered, then select
+    them all below.
 
     If you'd rather not enable this flag, use the raw-MQTT-topic blueprint instead — it works
     with zero setup but does not expose the buttons as a HA entity.
@@ -30,16 +32,20 @@ ablueprint:
     💡 Tip: prefer the **Released** actions over **Pressed** where possible — a short tap fires
     both `*_press` and `*_press_release`, and `*_press` also fires at the start of a long hold.
 
-  source_url: https://github.com/cleot/home-assistant-blueprints/blob/main/philips_929002398602/cleot/hue_dimmer_switch_929002398602/hue_dimmer_switch_929002398602.yaml
+  source_url: https://github.com/cleot/home-assistant-blueprints/blob/main/philips_929002398602/cleot/hue_dimmer_switch_929002398602.yaml
   domain: automation
   input:
     controller:
-      name: (Zigbee2MQTT) Action Event Entity
+      name: (Zigbee2MQTT) Action Event Entities
       description: >-
-        The action event entity of the dimmer switch, e.g. event.living_room_dimmer_action.
+        Select ALL of the dimmer's "Action" event entities. Zigbee2MQTT creates one per
+        physical button (on, off, up, down) and they are typically all named
+        "<device> Action", so simply select every event entity belonging to this dimmer —
+        the automation works out which button was pressed from the entity's attributes.
         Requires "Experimental event entities" enabled in Zigbee2MQTT (see description).
       selector:
         entity:
+          multiple: true
           filter:
             - integration: mqtt
               domain: event
@@ -154,12 +160,16 @@ triggers:
   - trigger: state
     entity_id: !input controller
 actions:
-  # the event_type attribute holds the Z2M action, e.g. "on_press"
+  # Z2M creates one event entity per button: the pressed button is in the "button" attribute
+  # (on/off/up/down) and the gesture in "event_type" (press/hold/press_release/hold_release).
+  # Recombine them into the canonical Z2M action, e.g. "off" + "press_release" = "off_press_release".
   - variables:
-      controller_action: "{{ trigger.to_state.attributes.event_type | default('') }}"
+      button: "{{ trigger.to_state.attributes.button | default('') }}"
+      gesture: "{{ trigger.to_state.attributes.event_type | default('') }}"
+      controller_action: "{{ button ~ '_' ~ gesture }}"
   - choose:
-      # ignore startup / unavailable transitions that carry no real action
-      - conditions: "{{ controller_action not in ['', 'None', 'unknown', 'unavailable'] }}"
+      # ignore startup/unavailable transitions and the binding-only "recall" gesture
+      - conditions: "{{ button != '' and gesture not in ['', 'None', 'unknown', 'unavailable', 'recall'] }}"
         sequence:
           - choose:
               - conditions: "{{ controller_action == 'on_press' }}"
