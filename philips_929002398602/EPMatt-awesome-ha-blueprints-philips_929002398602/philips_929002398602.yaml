@@ -47,6 +47,14 @@ blueprint:
             - integration: mqtt
               manufacturer: Philips
               model: Hue dimmer switch (929002398602)
+            # Z2M 2.x / newer HA device registry: model stored as model_id field
+            - integration: mqtt
+              manufacturer: Philips
+              model_id: "929002398602"
+            # Z2M 2.x / newer HA device registry: model stored as bare model number string
+            - integration: mqtt
+              manufacturer: Philips
+              model: "929002398602"
             # source: https://github.com/dresden-elektronik/deconz-rest-plugin/wiki/Supported-Devices
             - integration: zha
               manufacturer: Philips
