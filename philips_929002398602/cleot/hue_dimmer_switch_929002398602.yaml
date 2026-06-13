@@ -1,4 +1,4 @@
-ablueprint:
+blueprint:
   name: Philips Hue Dimmer Switch v2 (929002398602) - Event Entity Controller
   description: |
     # Philips Hue Dimmer Switch v2 (929002398602) — Event Entity Controller
